@@ -1,12 +1,17 @@
 #pragma once
 
 #include "byte_stream.hh"
+#include <queue>
+#include <set>
 
 class Reassembler
 {
 public:
   // Construct Reassembler to write into given ByteStream.
-  explicit Reassembler( ByteStream&& output ) : output_( std::move( output ) ) {}
+  explicit Reassembler( ByteStream&& output ) : output_( std::move( output ) )
+  {
+    buffer_slots_.insert( std::make_pair( 0, capacity_ ) );
+  }
 
   /*
    * Insert a new substring to be reassembled into a ByteStream.
@@ -42,4 +47,13 @@ public:
 
 private:
   ByteStream output_; // the Reassembler writes to this ByteStream
+  std::set<std::pair<uint64_t, uint64_t>> buffer_slots_ {};
+  std::priority_queue<std::pair<uint64_t, std::string>,
+                      std::vector<std::pair<uint64_t, std::string>>,
+                      std::greater<std::pair<uint64_t, std::string>>>
+    buffer_ {};
+  uint64_t current_ = 0;
+  uint64_t capacity_ = output_.writer().available_capacity();
+  uint64_t last_ = UINT64_MAX;
+  uint64_t pending_ = 0;
 };
