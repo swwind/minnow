@@ -33,7 +33,7 @@ void Reassembler::insert( uint64_t first_index, string data, bool is_last_substr
       const auto st = max( start, it->first ), ed = min( end, it->second );
       buffer_.push( make_pair( st, data.substr( st - first_index, ed - st ) ) );
       pending_ += ed - st;
-      fprintf( stderr, "pushed (%lu, %lu)\n", st, ed );
+      // fprintf( stderr, "pushed (%lu, %lu)\n", st, ed );
 
       if ( it->first < start )
         pr.emplace_back( it->first, start );
