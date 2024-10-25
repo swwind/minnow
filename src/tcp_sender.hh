@@ -6,9 +6,6 @@
 
 #include <cstdint>
 #include <functional>
-#include <list>
-#include <memory>
-#include <optional>
 #include <queue>
 
 class TCPSender
@@ -48,4 +45,11 @@ private:
   ByteStream input_;
   Wrap32 isn_;
   uint64_t initial_RTO_ms_;
+  uint64_t current_RTO_ms_ = 0;
+  uint64_t receiver_window_ = 1;
+  uint64_t sent_bytes_ = 0;
+  uint64_t acked_bytes_ = 0;
+  uint64_t retry_count_ = 0;
+  bool fin_sent_ = false;
+  std::queue<std::pair<uint64_t, TCPSenderMessage>> sending_messages_ {};
 };
