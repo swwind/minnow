@@ -1,4 +1,4 @@
-#include "socket.hh"
+#include "tcp_minnow_socket.hh"
 
 #include <cstdlib>
 #include <iostream>
@@ -12,7 +12,7 @@ void get_URL( const string& host, const string& path )
   // cerr << "Function called: get_URL(" << host << ", " << path << ")\n";
   // cerr << "Warning: get_URL() has not been implemented yet.\n";
 
-  TCPSocket socket;
+  CS144TCPSocket socket;
   socket.connect( Address( host, "http" ) );
   socket.write( "GET " + path + " HTTP/1.1\r\n" );
   socket.write( "Host: " + host + "\r\n" );
