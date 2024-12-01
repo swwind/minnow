@@ -1,10 +1,26 @@
 #pragma once
 
+#include <cstdint>
+#include <cstdio>
 #include <queue>
+#include <unordered_map>
+#include <vector>
 
 #include "address.hh"
+#include "arp_message.hh"
 #include "ethernet_frame.hh"
+#include "ethernet_header.hh"
 #include "ipv4_datagram.hh"
+#include "parser.hh"
+
+struct ARPState
+{
+  bool found {};
+  size_t request {};
+  size_t expire {};
+  EthernetAddress eth_address {};
+  std::vector<InternetDatagram> cache {};
+};
 
 // A "network interface" that connects IP (the internet layer, or network layer)
 // with Ethernet (the network access layer, or link layer).
@@ -81,4 +97,40 @@ private:
 
   // Datagrams that have been received
   std::queue<InternetDatagram> datagrams_received_ {};
+
+  // Memory of ARP maps
+  size_t timestamp_ {};
+  std::unordered_map<uint32_t, ARPState> arp_ {};
+
+  void update_arp( uint32_t ip_address, EthernetAddress eth_address )
+  {
+    auto& state = arp_[ip_address];
+    state.found = true;
+    state.eth_address = eth_address;
+    state.expire = timestamp_ + 30000;
+    for ( auto dgram : state.cache ) {
+      send_ipv4( eth_address, dgram );
+    }
+    state.cache.clear();
+  }
+
+  void send_ipv4( EthernetAddress eth_address, const InternetDatagram& dgram )
+  {
+    EthernetFrame frame;
+    frame.header.type = EthernetHeader::TYPE_IPv4;
+    frame.header.src = ethernet_address_;
+    frame.header.dst = eth_address;
+    frame.payload = serialize( dgram );
+    transmit( frame );
+  }
+
+  void send_arp( EthernetAddress eth_address, ARPMessage& message )
+  {
+    EthernetFrame frame;
+    frame.header.type = EthernetHeader::TYPE_ARP;
+    frame.header.src = ethernet_address_;
+    frame.header.dst = eth_address;
+    frame.payload = serialize( message );
+    transmit( frame );
+  }
 };
