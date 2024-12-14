@@ -1,7 +1,8 @@
 #include "router.hh"
+#include "address.hh"
 
-#include <iostream>
-#include <limits>
+#include <algorithm>
+#include <cstdint>
 
 using namespace std;
 
@@ -16,15 +17,40 @@ void Router::add_route( const uint32_t route_prefix,
                         const optional<Address> next_hop,
                         const size_t interface_num )
 {
-  cerr << "DEBUG: adding route " << Address::from_ipv4_numeric( route_prefix ).ip() << "/"
-       << static_cast<int>( prefix_length ) << " => " << ( next_hop.has_value() ? next_hop->ip() : "(direct)" )
-       << " on interface " << interface_num << "\n";
-
-  // Your code here.
+  uint32_t subnetmask = prefix_length ? ~( ( 1u << ( 32 - prefix_length ) ) - 1u ) : 0;
+  _route_table.emplace_back( route_prefix & subnetmask, subnetmask, next_hop, interface_num );
+  dirty = true;
 }
 
 // Go through all the interfaces, and route every incoming datagram to its proper outgoing interface.
 void Router::route()
 {
-  // Your code here.
+  if ( dirty ) {
+    sort( _route_table.begin(), _route_table.end(), [&]( const Route& a, const Route& b ) {
+      return a.subnet_mask > b.subnet_mask;
+    } );
+    dirty = false;
+  }
+
+  for ( auto& i : _interfaces ) {
+    auto& q = i->datagrams_received();
+    while ( !q.empty() ) {
+      auto dgram = q.front();
+      q.pop();
+
+      if ( !dgram.header.ttl )
+        continue;
+      if ( !--dgram.header.ttl )
+        continue;
+      dgram.header.compute_checksum();
+
+      for ( auto& route : _route_table ) {
+        if ( ( dgram.header.dst & route.subnet_mask ) == route.route_prefix ) {
+          _interfaces[route.interface_num]->send_datagram(
+            dgram, route.next_hop.value_or( Address::from_ipv4_numeric( dgram.header.dst ) ) );
+          break;
+        }
+      }
+    }
+  }
 }

@@ -36,6 +36,7 @@ void NetworkInterface::send_datagram( const InternetDatagram& dgram, const Addre
   auto& state = arp_[next_hop.ipv4_numeric()];
   // if not found
   if ( !state.found ) {
+    state.cache.push_back( dgram );
     if ( state.request <= timestamp_ ) {
       // send a request
       ARPMessage arp;
@@ -46,9 +47,6 @@ void NetworkInterface::send_datagram( const InternetDatagram& dgram, const Addre
       send_arp( ETHERNET_BROADCAST, arp );
       state.request = timestamp_ + 5000;
     }
-    // fprintf( stderr, "request is %u\n", (unsigned int)state.request );
-    state.cache.push_back( dgram );
-    arp_[next_hop.ipv4_numeric()] = state;
   } else {
     send_ipv4( state.eth_address, dgram );
   }
